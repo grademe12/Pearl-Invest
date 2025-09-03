@@ -1,0 +1,482 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pearl-invest
+---
+# ================== 공통 ConfigMap ==================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pearl-common-config
+  namespace: pearl-invest
+data:
+  nginx.conf: |
+    user www-data;
+    worker_processes auto;
+    pid /run/nginx.pid;
+    
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        log_format teleport '$remote_addr [$time_local] "$request" $status '
+                           'teleport_user="$http_x_teleport_user"';
+        
+        access_log /var/log/nginx/access.log teleport;
+        error_log /var/log/nginx/error.log;
+        
+        server {
+            listen 80;
+            server_name _;
+            
+            location /health {
+                access_log off;
+                return 200 "OK\n";
+                add_header Content-Type text/plain;
+            }
+            
+            location / {
+                return 200 '{"service":"pearl-invest","status":"running","user":"$http_x_teleport_user"}';
+                add_header Content-Type application/json;
+            }
+        }
+    }
+  
+  supervisord.conf: |
+    [unix_http_server]
+    file=/run/supervisord.sock
+    
+    [supervisord]
+    nodaemon=true
+    user=root
+    logfile=/var/log/supervisor/supervisord.log
+    pidfile=/run/supervisord.pid
+    
+    [rpcinterface:supervisor]
+    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+    
+    [supervisorctl]
+    serverurl=unix:///run/supervisord.sock
+    
+    [program:nginx]
+    command=/usr/sbin/nginx -g "daemon off;"
+    autostart=true
+    autorestart=true
+    stdout_logfile=/var/log/nginx/stdout.log
+    stderr_logfile=/var/log/nginx/stderr.log
+    
+    [program:teleport]
+    command=/usr/local/bin/teleport start --config=/etc/teleport/teleport.yaml
+    autostart=true
+    autorestart=true
+    stdout_logfile=/var/log/teleport/stdout.log
+    stderr_logfile=/var/log/teleport/stderr.log
+    environment=HOME="/var/lib/teleport"
+---
+# ================== Auth Service ConfigMap ==================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: pearl-invest
+data:
+  teleport.yaml: |
+    version: v3
+    teleport:
+      nodename: pearl-auth-node
+      data_dir: /var/lib/teleport
+      auth_token: /etc/teleport/secrets/auth-token
+      proxy_server: teleport.pearlinvest.click:443
+      log:
+        output: stdout
+        severity: INFO
+    
+    auth_service:
+      enabled: false
+    
+    ssh_service:
+      enabled: true
+      labels:
+        app: pearl-invest
+        service: auth
+        env: production
+    
+    proxy_service:
+      enabled: false
+    
+    app_service:
+      enabled: false
+      apps:
+      - name: "pearl-auth"
+        uri: "http://localhost:80"
+        labels:
+          env: production
+          service: authentication
+          tier: backend
+          critical: true
+---
+# ================== Trading Service ConfigMap ==================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trading-service-config
+  namespace: pearl-invest
+data:
+  teleport.yaml: |
+    version: v3
+    teleport:
+      nodename: pearl-trading-node
+      data_dir: /var/lib/teleport
+      auth_token: /etc/teleport/secrets/auth-token
+      proxy_server: teleport.pearlinvest.click:443
+      log:
+        output: stdout
+        severity: INFO
+    
+    auth_service:
+      enabled: false
+    
+    ssh_service:
+      enabled: true
+      labels:
+        app: pearl-invest
+        service: trading
+        env: production
+    
+    proxy_service:
+      enabled: false
+    
+    app_service:
+      enabled: false
+      apps:
+      - name: "pearl-trading"
+        uri: "http://localhost:80"
+        labels:
+          env: production
+          service: trading-engine
+          tier: backend
+          critical: true
+---
+# ================== Portfolio Service ConfigMap ==================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portfolio-service-config
+  namespace: pearl-invest
+data:
+  teleport.yaml: |
+    version: v3
+    teleport:
+      nodename: pearl-portfolio-node
+      data_dir: /var/lib/teleport
+      auth_token: /etc/teleport/secrets/auth-token
+      proxy_server: teleport.pearlinvest.click:443
+      log:
+        output: stdout
+        severity: INFO
+    
+    auth_service:
+      enabled: false
+    
+    ssh_service:
+      enabled: true
+      labels:
+        app: pearl-invest
+        service: portfolio
+        env: production
+    
+    proxy_service:
+      enabled: false
+    
+    app_service:
+      enabled: false
+      apps:
+      - name: "pearl-portfolio"
+        uri: "http://localhost:80"
+        labels:
+          env: production
+          service: portfolio-management
+          tier: backend
+---
+# ================== Auth Service Deployment ==================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pearl-auth
+  namespace: pearl-invest
+  labels:
+    app: pearl-auth
+    service: authentication
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pearl-auth
+  template:
+    metadata:
+      labels:
+        app: pearl-auth
+        service: authentication
+        tier: backend
+    spec:
+      containers:
+      - name: pearl-auth
+        image: pearl-invest/debian-slim:v2.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: SERVICE_NAME
+          value: "auth-service"
+        volumeMounts:
+        - name: common-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: common-config
+          mountPath: /etc/supervisor/conf.d/supervisord.conf
+          subPath: supervisord.conf
+        - name: auth-config
+          mountPath: /etc/teleport/teleport.yaml
+          subPath: teleport.yaml
+        - name: teleport-data
+          mountPath: /var/lib/teleport
+        - name: teleport-token
+          mountPath: /etc/teleport/secrets
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 20
+          periodSeconds: 10
+      volumes:
+      - name: teleport-token
+        secret:
+          secretName: teleport-join-token
+          items:
+          - key: token
+            path: auth-token
+      - name: common-config
+        configMap:
+          name: pearl-common-config
+      - name: auth-config
+        configMap:
+          name: auth-service-config
+      - name: teleport-data
+        emptyDir: {}
+---
+# ================== Trading Service Deployment ==================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pearl-trading
+  namespace: pearl-invest
+  labels:
+    app: pearl-trading
+    service: trading-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pearl-trading
+  template:
+    metadata:
+      labels:
+        app: pearl-trading
+        service: trading-engine
+        tier: backend
+    spec:
+      containers:
+      - name: pearl-trading
+        image: pearl-invest/debian-slim:v2.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: SERVICE_NAME
+          value: "trading-service"
+        volumeMounts:
+        - name: common-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: common-config
+          mountPath: /etc/supervisor/conf.d/supervisord.conf
+          subPath: supervisord.conf
+        - name: trading-config
+          mountPath: /etc/teleport/teleport.yaml
+          subPath: teleport.yaml
+        - name: teleport-data
+          mountPath: /var/lib/teleport
+        - name: teleport-token
+          mountPath: /etc/teleport/secrets
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 20
+          periodSeconds: 10
+      volumes:
+      - name: teleport-token
+        secret:
+          secretName: teleport-join-token
+          items:
+          - key: token
+            path: auth-token
+      - name: common-config
+        configMap:
+          name: pearl-common-config
+      - name: trading-config
+        configMap:
+          name: trading-service-config
+      - name: teleport-data
+        emptyDir: {}
+---
+# ================== Portfolio Service Deployment ==================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pearl-portfolio
+  namespace: pearl-invest
+  labels:
+    app: pearl-portfolio
+    service: portfolio-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pearl-portfolio
+  template:
+    metadata:
+      labels:
+        app: pearl-portfolio
+        service: portfolio-management
+        tier: backend
+    spec:
+      containers:
+      - name: pearl-portfolio
+        image: pearl-invest/debian-slim:v2.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: SERVICE_NAME
+          value: "portfolio-service"
+        volumeMounts:
+        - name: common-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: common-config
+          mountPath: /etc/supervisor/conf.d/supervisord.conf
+          subPath: supervisord.conf
+        - name: portfolio-config
+          mountPath: /etc/teleport/teleport.yaml
+          subPath: teleport.yaml
+        - name: teleport-data
+          mountPath: /var/lib/teleport
+        - name: teleport-token
+          mountPath: /etc/teleport/secrets
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 20
+          periodSeconds: 10
+      volumes:
+      - name: teleport-token
+        secret:
+          secretName: teleport-join-token
+          items:
+          - key: token
+            path: auth-token
+      - name: common-config
+        configMap:
+          name: pearl-common-config
+      - name: portfolio-config
+        configMap:
+          name: portfolio-service-config
+      - name: teleport-data
+        emptyDir: {}
+---
+# ================== Auth Service ==================
+apiVersion: v1
+kind: Service
+metadata:
+  name: pearl-auth
+  namespace: pearl-invest
+  labels:
+    app: pearl-auth
+spec:
+  type: NodePort
+  selector:
+    app: pearl-auth
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30081
+    name: http
+---
+# ================== Trading Service ==================
+apiVersion: v1
+kind: Service
+metadata:
+  name: pearl-trading
+  namespace: pearl-invest
+  labels:
+    app: pearl-trading
+spec:
+  type: NodePort
+  selector:
+    app: pearl-trading
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30082
+    name: http
+---
+# ================== Portfolio Service ==================
+apiVersion: v1
+kind: Service
+metadata:
+  name: pearl-portfolio
+  namespace: pearl-invest
+  labels:
+    app: pearl-portfolio
+spec:
+  type: NodePort
+  selector:
+    app: pearl-portfolio
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30083
+    name: http
