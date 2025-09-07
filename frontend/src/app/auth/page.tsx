@@ -5,11 +5,17 @@ import { useState } from 'react';
 // 라즈베리파이 K8s Auth 서비스 주소
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.45.205:30080';
 
+type UserProfile = {
+  id: number;
+  username: string;
+  email: string;
+};
+
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 

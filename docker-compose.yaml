@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  # 1. 프론트엔드 애플리케이션 컨테이너
+  frontend:
+    build:
+      context: ./frontend # ./frontend 폴더의 Dockerfile을 사용
+    container_name: pearl_frontend
+    restart: always
+
+  # 2. NGINX 리버스 프록시 컨테이너
+  nginx:
+    image: nginx:alpine
+    container_name: pearl_nginx_proxy
+    restart: always
+    ports:
+      - "80:80" # 미니 PC의 80번 포트를 NGINX 컨테이너의 80번 포트로 연결
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
