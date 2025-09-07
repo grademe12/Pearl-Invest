@@ -1,0 +1,90 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pearl-invest
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pearl-auth-api
+  namespace: pearl-invest
+  labels:
+    app: pearl-auth
+    version: v2
+spec:
+  replicas: 1  # 라즈베리파이니까 1개로 시작
+  selector:
+    matchLabels:
+      app: pearl-auth
+  template:
+    metadata:
+      labels:
+        app: pearl-auth
+        version: v2
+    spec:
+      containers:
+      - name: auth-api
+        image: pearl-auth-api:v2.0
+        imagePullPolicy: IfNotPresent  # 로컬 이미지 사용
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: SERVICE_PORT
+          value: "8080"
+        - name: JWT_SECRET
+          value: "pearl-invest-dev-secret"  # 나중에 Secret으로 변경
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pearl-auth-service
+  namespace: pearl-invest
+  labels:
+    app: pearl-auth
+spec:
+  type: NodePort  # 외부 접근용
+  selector:
+    app: pearl-auth
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30080  # 라즈베리파이 IP:30080으로 접근 가능
+    name: http
+---
+# 내부 통신용 ClusterIP 서비스 (Next.js에서 사용)
+apiVersion: v1
+kind: Service
+metadata:
+  name: pearl-auth-internal
+  namespace: pearl-invest
+  labels:
+    app: pearl-auth
+spec:
+  type: ClusterIP
+  selector:
+    app: pearl-auth
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
