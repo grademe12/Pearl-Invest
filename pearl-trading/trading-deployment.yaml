@@ -1,0 +1,84 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pearl-trading-api
+  namespace: pearl-invest
+  labels:
+    app: pearl-trading
+    version: v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pearl-trading
+  template:
+    metadata:
+      labels:
+        app: pearl-trading
+        version: v2
+    spec:
+      containers:
+      - name: trading-api
+        image: pearl-trading-api:v2.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8082
+          name: http
+        env:
+        - name: SERVICE_PORT
+          value: "8082"
+        - name: AUTH_SERVICE_URL
+          value: "http://pearl-auth-internal:8080"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pearl-trading-service
+  namespace: pearl-invest
+  labels:
+    app: pearl-trading
+spec:
+  type: NodePort
+  selector:
+    app: pearl-trading
+  ports:
+  - port: 8082
+    targetPort: 8082
+    nodePort: 30081
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pearl-trading-internal
+  namespace: pearl-invest
+  labels:
+    app: pearl-trading
+spec:
+  type: ClusterIP
+  selector:
+    app: pearl-trading
+  ports:
+  - port: 8082
+    targetPort: 8082
+    name: http
