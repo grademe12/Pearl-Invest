@@ -1,5 +1,15 @@
 # Pearl-Invest Teleport Infrastructure v1.0
 
+> **이 문서는 v1.0 기준입니다.**
+> v1.0은 라즈베리파이 K3s의 파드 하나에 앱, NGINX, Teleport 에이전트를 함께 띄운 구조였습니다. 이후 장비 단위로 나눈 v2.0으로 재구성했습니다. 미니 PC는 Next.js와 NGINX, 라즈베리파이 K3s는 API 파드, EC2는 Teleport를 맡습니다. 그다음 스마트공장 시뮬레이션으로 방향을 바꿨습니다.
+>
+> - 재구성 과정과 현재 구조: <https://woosupar.dev/projects/pearl-invest/>
+> - Teleport와 K3s RBAC 설정: [Pearl-Invest-infra](https://github.com/grademe12/Pearl-Invest-infra)
+> - Modbus TCP를 OPC-UA로 바꾸는 게이트웨이: [factory-OPCUA](https://github.com/grademe12/factory-OPCUA)
+> - 센서 데이터 관제: [factory-monitoring](https://github.com/grademe12/factory-monitoring)
+> - Kinesis, Firehose, S3 백업 Terraform: [pearl_terraform](https://github.com/grademe12/pearl_terraform)
+
+
 ## 🎯 Overview
 
 Pearl-Invest는 Teleport를 활용한 Zero Trust 접근 제어 시스템으로, Edge K3s Cluster에서 실행되는 마이크로서비스들을 안전하게 관리합니다.
