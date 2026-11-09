@@ -9,17 +9,7 @@
 
 ## 구조
 
-```text
-관리자 ── tsh / 웹 UI ──▶ Teleport 클러스터 (AWS EC2)
-                              │  사용자 인증, 역할 확인, 단기 인증서, 세션 녹화
-                              ▼
-               라즈베리파이 K3s, 네임스페이스 pearl-invest
-               ┌──────────────────────────────────────────┐
-               │ pearl-auth      NGINX + Teleport 에이전트 │  label service=auth
-               │ pearl-trading   NGINX + Teleport 에이전트 │  label service=trading
-               │ pearl-portfolio NGINX + Teleport 에이전트 │  label service=portfolio
-               └──────────────────────────────────────────┘
-```
+![Pearl Invest v1.0 구성도](docs/architecture.svg)
 
 - 각 파드는 Debian 이미지 하나에 NGINX와 Teleport 에이전트를 supervisord로 함께 띄웁니다. 에이전트가 EC2의 Teleport에 먼저 연결하므로, 공유기에서 포트를 열지 않아도 밖에서 들어올 수 있습니다.
 - 에이전트마다 `service` 라벨을 붙이고, Teleport 역할이 이 라벨로 접근 범위를 정합니다. 예를 들어 trader 역할은 `service=trading` 노드에만 들어갈 수 있습니다.

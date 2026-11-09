@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" width="640" height="380" role="img" aria-label="Pearl Invest v1.0 구성도: 관리자는 tsh나 웹 UI로 AWS EC2의 Teleport에 로그인합니다. 라즈베리파이 K3s의 auth, trading, portfolio 파드는 각각 NGINX와 Teleport 에이전트를 함께 띄우고, 에이전트가 먼저 Teleport에 연결합니다. Teleport 역할은 service 라벨로 접근할 수 있는 파드를 정하고 세션을 녹화합니다.">
+<rect width="640" height="380" fill="#fff"></rect>
+<defs><pattern id="pearlv1-grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#f0f0f0" stroke-width="1"></path></pattern></defs>
+<rect width="640" height="380" fill="url(#pearlv1-grid)"></rect>
+<rect x="200" y="150" width="420" height="200" fill="none" stroke="#8d8d8d" stroke-width="1"></rect>
+<path d="M120 84 H220" fill="none" stroke="#d1621f" stroke-width="4"></path>
+<path d="M300 108 V140 H520 V170 M300 140 V170 M410 140 V170" fill="none" stroke="#0f62fe" stroke-width="3" stroke-dasharray="8 5"></path>
+<g font-family="-apple-system, BlinkMacSystemFont, Apple SD Gothic Neo, Pretendard Variable, Pretendard, sans-serif" font-size="13" fill="#161616">
+<text x="608" y="338" text-anchor="end" font-size="12" fill="#8d8d8d">라즈베리파이 K3s · pearl-invest</text>
+<rect x="20" y="60" width="100" height="48" fill="#fff" stroke="#161616" stroke-width="1.5"></rect>
+<text x="70" y="79.5" text-anchor="middle" font-weight="600" font-size="13">관리자</text>
+<text x="70" y="98.5" text-anchor="middle" font-size="11" fill="#525252" font-family="IBM Plex Mono, monospace">tsh · 웹 UI</text>
+<rect x="220" y="50" width="240" height="58" fill="#161616"></rect>
+<text x="340" y="74.5" text-anchor="middle" font-weight="600" font-size="13" fill="#fff">Teleport · AWS EC2</text>
+<text x="340" y="93.5" text-anchor="middle" font-size="12" fill="#c6c6c6">인증 · 역할 · 세션 녹화</text>
+<rect x="245" y="170" width="110" height="80" fill="#fff" stroke="#161616" stroke-width="1.5"></rect>
+<text x="300" y="196" text-anchor="middle" font-weight="600" font-size="12">pearl-auth</text>
+<text x="300" y="215" text-anchor="middle" font-size="11" fill="#525252" font-family="IBM Plex Mono, monospace">NGINX</text>
+<text x="300" y="234" text-anchor="middle" font-size="12" fill="#525252">Teleport 에이전트</text>
+<text x="300" y="270" text-anchor="middle" font-size="10" fill="#525252" font-family="IBM Plex Mono, monospace">service=auth</text>
+<rect x="355" y="170" width="110" height="80" fill="#fff" stroke="#161616" stroke-width="1.5"></rect>
+<text x="410" y="196" text-anchor="middle" font-weight="600" font-size="12">pearl-trading</text>
+<text x="410" y="215" text-anchor="middle" font-size="11" fill="#525252" font-family="IBM Plex Mono, monospace">NGINX</text>
+<text x="410" y="234" text-anchor="middle" font-size="12" fill="#525252">Teleport 에이전트</text>
+<text x="410" y="270" text-anchor="middle" font-size="10" fill="#525252" font-family="IBM Plex Mono, monospace">service=trading</text>
+<rect x="465" y="170" width="120" height="80" fill="#fff" stroke="#161616" stroke-width="1.5"></rect>
+<text x="525" y="196" text-anchor="middle" font-weight="600" font-size="12">pearl-portfolio</text>
+<text x="525" y="215" text-anchor="middle" font-size="11" fill="#525252" font-family="IBM Plex Mono, monospace">NGINX</text>
+<text x="525" y="234" text-anchor="middle" font-size="12" fill="#525252">Teleport 에이전트</text>
+<text x="520" y="270" text-anchor="middle" font-size="10" fill="#525252" font-family="IBM Plex Mono, monospace">service=portfolio</text>
+<text x="520" y="84" text-anchor="middle" font-size="11" fill="#0f62fe">에이전트가 먼저 연결</text>
+<text x="520" y="102" text-anchor="middle" font-size="11" fill="#525252">공유기 포트 열지 않음</text>
+</g>
+</svg>
